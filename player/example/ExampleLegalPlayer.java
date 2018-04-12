@@ -1,3 +1,4 @@
+package example;
 import java.util.List;
 
 import org.ggp.base.apps.player.Player;
@@ -10,6 +11,8 @@ import org.ggp.base.util.statemachine.exceptions.GoalDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 import org.ggp.base.util.statemachine.implementation.prover.ProverStateMachine;
+
+import base.GGPlayer;
 
 public class ExampleLegalPlayer extends GGPlayer {
 
