@@ -45,7 +45,7 @@ public class RandomPlayerJack extends GGPlayer {
 		List<Move> legals = findLegals(role, state, machine);
 		int randIndex = new Random().nextInt(legals.size());
 		Move move = legals.get(randIndex);
-		System.out.print("Move is: " + move);
+		System.out.println("Move is: " + move);
 		return move;
 	}
 

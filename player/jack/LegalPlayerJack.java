@@ -40,10 +40,12 @@ public class LegalPlayerJack extends GGPlayer {
 		StateMachine machine = getStateMachine();
 		MachineState state = getCurrentState();
 		Role role = getRole();
-
 		List<Move> legals = findLegals(role, state, machine);
+		for(Move m : legals) {
+			System.out.println("" + m);
+		}
 		Move move = legals.get(0);
-		System.out.print("Move is: " + move);
+		System.out.println("Move is: " + move);
 		return move;
 	}
 
