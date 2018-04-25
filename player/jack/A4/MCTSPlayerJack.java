@@ -15,7 +15,7 @@ import org.ggp.base.util.statemachine.implementation.prover.ProverStateMachine;
 
 import base.GGPlayer;
 
-public class MCSPlayerJack extends GGPlayer {
+public class MCTSPlayerJack extends GGPlayer {
 
 	private static final long PADDING = 3000;
 	private static final int COUNT = 4;
