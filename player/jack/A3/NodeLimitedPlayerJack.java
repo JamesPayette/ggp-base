@@ -1,7 +1,6 @@
-package jack;
+package jack.A3;
 
 import java.util.List;
-import java.util.Map;
 
 import org.ggp.base.apps.player.Player;
 import org.ggp.base.util.statemachine.MachineState;
@@ -16,17 +15,19 @@ import org.ggp.base.util.statemachine.implementation.prover.ProverStateMachine;
 
 import base.GGPlayer;
 
-public class CompulsiveDeliberationJack extends GGPlayer {
+public class NodeLimitedPlayerJack extends GGPlayer {
+
+	private static final int MAX_NODES = 200;
+	private int nodesSeen;
 
 	public static void main(String[] args) {
-		Player.initialize(new CompulsiveDeliberationJack().getName());
+		Player.initialize(new NodeLimitedPlayerJack().getName());
 	}
 
 	@Override
 	public void start(long timeout)
 			throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException {
 		// NOOP
-
 	}
 
 	@Override
@@ -35,56 +36,67 @@ public class CompulsiveDeliberationJack extends GGPlayer {
 		StateMachine machine = getStateMachine();
 		MachineState state = getCurrentState();
 		Role role = getRole();
+		nodesSeen = 0;
 		Move bestMove = findBestMove(machine, state, role);
 		System.out.println("Move is: " + bestMove);
 		return bestMove;
 	}
 
 	private Move findBestMove(StateMachine machine, MachineState state, Role role)
-			throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException{
-		List<Move> legals = machine.findLegals(role, state);
-		Map<Move, List<MachineState>> nextStateMap = machine.getNextStates(state, role);
-		Move bestMove = null;
-		int bestScore = 0;
+			throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException {
+		List<Move> legals = machine.getLegalMoves(state, role);
+		Move maxMove = null;
+		int maxScore = 0;
 		for (Move move : legals) {
-			for (MachineState nextState : nextStateMap.get(move)) {
-				int score = bestScore(machine, nextState, role);
-				if (bestMove == null || score >= bestScore) {
-					bestMove = move;
-					bestScore = score;
-				}
-				if (bestScore == 100) break;
+			int score = min(machine, state, role, move, 0, 100);
+			if (maxMove == null || score > maxScore) {
+				maxMove = move;
+				maxScore = score;
 			}
+			if (maxScore == 100) break;
 		}
-		return bestMove;
+		return maxMove;
 	}
 
-	private int bestScore(StateMachine machine, MachineState state, Role role)
+	private int min(StateMachine machine, MachineState state, Role role, Move move, int alpha, int beta)
 			throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException {
+		nodesSeen++;
+		List<List<Move>> jointMoves = machine.getLegalJointMoves(state, role, move);
+		for (List<Move> jointMove : jointMoves) {
+			MachineState nextState = machine.getNextState(state, jointMove);
+			int score = max(machine, nextState, role, alpha, beta);
+			beta = Math.min(score, beta);
+			if (beta <= alpha) return alpha;
+		}
+		return beta;
+	}
+
+	private int max(StateMachine machine, MachineState state, Role role, int alpha, int beta)
+			throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException {
+		nodesSeen++;
 		if (machine.findTerminalp(state)) {
 			return machine.findReward(role, state);
 		}
-		int bestScore = 0;
-		for (MachineState nextState : machine.getNextStates(state)) {
-			int score = bestScore(machine, nextState, role);
-			if (score > bestScore) {
-				bestScore = score;
-			}
-			if (bestScore == 100) break;
+		if (nodesSeen >= MAX_NODES) {
+			return 0;
 		}
-		return bestScore;
+		List<Move> legals = machine.getLegalMoves(state, role);
+		for (Move move : legals) {
+			int score = min(machine, state, role, move, alpha, beta);
+			alpha = Math.max(score, alpha);
+			if (alpha >= beta) return beta;
+		}
+		return alpha;
 	}
 
 	@Override
 	public void abort() {
 		// NOOP
-
 	}
 
 	@Override
 	public void stop() {
 		// NOOP
-
 	}
 
 	@Override
@@ -94,7 +106,7 @@ public class CompulsiveDeliberationJack extends GGPlayer {
 
 	@Override
 	public String getName() {
-		return "jack_compulsive_deliberation_player";
+		return "jack_node_limited_player";
 	}
 
 }

@@ -1,7 +1,6 @@
-package jack;
+package jack.A2;
 
 import java.util.List;
-import java.util.Random;
 
 import org.ggp.base.apps.player.Player;
 import org.ggp.base.util.statemachine.MachineState;
@@ -16,7 +15,7 @@ import org.ggp.base.util.statemachine.implementation.prover.ProverStateMachine;
 
 import base.GGPlayer;
 
-public class RandomPlayerJack extends GGPlayer {
+public class LegalPlayerJack extends GGPlayer {
 
 	/**
 	 * All we have to do here is call the Player's initialize method with
@@ -25,14 +24,13 @@ public class RandomPlayerJack extends GGPlayer {
 	 * of your own player.
 	 */
 	public static void main(String[] args) {
-		Player.initialize(new RandomPlayerJack().getName());
+		Player.initialize(new LegalPlayerJack().getName());
 	}
 
 	@Override
 	public void start(long timeout)
 			throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException {
 		// NOOP
-
 	}
 
 	@Override
@@ -41,10 +39,11 @@ public class RandomPlayerJack extends GGPlayer {
 		StateMachine machine = getStateMachine();
 		MachineState state = getCurrentState();
 		Role role = getRole();
-
 		List<Move> legals = findLegals(role, state, machine);
-		int randIndex = new Random().nextInt(legals.size());
-		Move move = legals.get(randIndex);
+		for(Move m : legals) {
+			System.out.println("" + m);
+		}
+		Move move = legals.get(0);
 		System.out.println("Move is: " + move);
 		return move;
 	}
@@ -68,7 +67,7 @@ public class RandomPlayerJack extends GGPlayer {
 
 	@Override
 	public String getName() {
-		return "jack_random_player";
+		return "jack_legal_player";
 	}
 
 }
