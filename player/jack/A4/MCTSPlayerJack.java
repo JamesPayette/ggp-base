@@ -17,7 +17,7 @@ import base.GGPlayer;
 
 public class MCTSPlayerJack extends GGPlayer {
 
-	private static final long PADDING = 3000;
+	private static final long PADDING = 5000;
 	private long paddedTimeout;
 	private MCTSNode rootNode;
 
@@ -51,6 +51,9 @@ public class MCTSPlayerJack extends GGPlayer {
 	private Move findBestMove(StateMachine machine, MachineState state, Role role)
 			throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException {
 		rootNode = rootNode.findNodeByState(state);
+		if (rootNode == null) {
+			rootNode = new MCTSNode(machine, state, null);
+		}
 		rootNode.setRoot();
 		while (System.currentTimeMillis() < paddedTimeout) {
 			MCTSNode selection = rootNode.select();
