@@ -18,7 +18,7 @@ import base.GGPlayer;
 public class MCSPlayerJack extends GGPlayer {
 
 	private static final long PADDING = 3000;
-	private static final int COUNT = 4;
+	private static final int COUNT = 20;
 	private long paddedTimeout;
 	private boolean timedOut;
 	private boolean treeExplored;
@@ -113,10 +113,10 @@ public class MCSPlayerJack extends GGPlayer {
 
 	private int heuristic(StateMachine machine, MachineState state, Role role)
 			throws MoveDefinitionException, GoalDefinitionException, TransitionDefinitionException {
-		return monteCarlo(machine, state, role);
+		return monteCarloSearch(machine, state, role);
 	}
 
-	private int monteCarlo(StateMachine machine, MachineState state, Role role)
+	private int monteCarloSearch(StateMachine machine, MachineState state, Role role)
 			throws GoalDefinitionException, TransitionDefinitionException, MoveDefinitionException {
 		int total = 0;
 		for (int i = 0; i < COUNT; i++) {
