@@ -176,10 +176,13 @@ public class MCTSPlayerWayne extends GGPlayer {
 
 	private void expand(Node node) throws TransitionDefinitionException, MoveDefinitionException {
 		// On expansion, need to populate node's children, as well as initialize utility, visit, and move arrays
-		node.children = new ArrayList<Node>();
-		for (List<Move> jointMove : node.jointLegalMoves) {
-			MachineState nextState = node.machine.getNextState(node.state, jointMove);
-			node.children.add(new Node(node.role, nextState, node.machine, node, jointMove));
+		// Don't bother expanding terminal states.
+		if (node.children == null && !node.machine.isTerminal(node.state)) {
+			node.children = new ArrayList<Node>();
+			for (List<Move> jointMove : node.jointLegalMoves) {
+				MachineState nextState = node.machine.getNextState(node.state, jointMove);
+				node.children.add(new Node(node.role, nextState, node.machine, node, jointMove));
+			}
 		}
 	}
 
@@ -265,12 +268,14 @@ public class MCTSPlayerWayne extends GGPlayer {
 			this.parent = parent;
 			this.originMove = move;
 
-			this.playerLegalMoves = machine.getLegalMoves(state, role);
-			this.jointLegalMoves = machine.getLegalJointMoves(state);
-			this.playerUtilities =  new double[this.playerLegalMoves.size()];
-			this.playerVisits =  new int[this.playerLegalMoves.size()];
-			this.jointUtilities =  new double[this.jointLegalMoves.size()];
-			this.jointVisits =  new int[this.jointLegalMoves.size()];
+			if (!machine.isTerminal(state)) {
+				this.playerLegalMoves = machine.getLegalMoves(state, role);
+				this.jointLegalMoves = machine.getLegalJointMoves(state);
+				this.playerUtilities =  new double[this.playerLegalMoves.size()];
+				this.playerVisits =  new int[this.playerLegalMoves.size()];
+				this.jointUtilities =  new double[this.jointLegalMoves.size()];
+				this.jointVisits =  new int[this.jointLegalMoves.size()];
+			}
 		}
 	}
 
