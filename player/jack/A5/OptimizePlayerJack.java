@@ -1,8 +1,10 @@
-package jack.A4;
+package jack.A5;
 
+import java.util.List;
 import java.util.Map;
 
 import org.ggp.base.apps.player.Player;
+import org.ggp.base.util.gdl.grammar.Gdl;
 import org.ggp.base.util.statemachine.MachineState;
 import org.ggp.base.util.statemachine.Move;
 import org.ggp.base.util.statemachine.Role;
@@ -14,21 +16,26 @@ import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 import org.ggp.base.util.statemachine.implementation.prover.ProverStateMachine;
 
 import base.GGPlayer;
+import jack.A4.MCTSNode;
 
-public class MCTSPlayerJack extends GGPlayer {
+public class OptimizePlayerJack extends GGPlayer {
 
 	private static final long PADDING = 5000;
 	private long paddedTimeout;
 	private MCTSNode rootNode;
 
 	public static void main(String[] args) {
-		Player.initialize(new MCTSPlayerJack().getName());
+		Player.initialize(new OptimizePlayerJack().getName());
 	}
 
 	@Override
 	public void start(long timeout)
 			throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException {
-		StateMachine machine = getStateMachine();
+		List<Gdl> rules = getMatch().getGame().getRules();
+		rules = SubgoalReorderer.optimize(rules);
+		StateMachine machine = getInitialStateMachine();
+		machine.initialize(rules);
+		switchStateMachine(machine);
 		MachineState state = getCurrentState();
 		Role role = getRole();
 		rootNode = new MCTSNode(machine, state);
@@ -60,7 +67,6 @@ public class MCTSPlayerJack extends GGPlayer {
 		return rootNode.findBestChild(role);
 	}
 
-
 	@Override
 	public void abort() {
 		// NOOP
@@ -78,7 +84,7 @@ public class MCTSPlayerJack extends GGPlayer {
 
 	@Override
 	public String getName() {
-		return "jack_MCTS_player";
+		return "jack_optimize_player";
 	}
 
 }
