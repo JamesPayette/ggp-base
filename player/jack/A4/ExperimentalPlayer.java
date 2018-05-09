@@ -33,8 +33,8 @@ import base.GGPlayer;
 public class ExperimentalPlayer extends GGPlayer {
 
 	// We give 5 seconds of padding just to be safe
-	private static final long PADDING_LONG = 5000;
-	private static final long PADDING_SHORT = 3000;
+	private static final long PADDING_LONG = 3500;
+	private static final long PADDING_SHORT = 2500;
 	// We use the same simulator throughout, just updating the root node when necessary.
 	private MCTSSimulator simulator;
 
