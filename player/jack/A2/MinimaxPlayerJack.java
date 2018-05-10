@@ -96,7 +96,7 @@ public class MinimaxPlayerJack extends GGPlayer {
 
 	@Override
 	public String getName() {
-		return "jack_minimax_player";
+		return "_minimax_player_jack";
 	}
 
 }

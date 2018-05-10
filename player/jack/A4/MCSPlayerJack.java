@@ -161,7 +161,7 @@ public class MCSPlayerJack extends GGPlayer {
 
 	@Override
 	public String getName() {
-		return "jack_MCS_player";
+		return "_MCS_player_jack";
 	}
 
 }

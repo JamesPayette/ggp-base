@@ -87,7 +87,7 @@ public class CompDelibPlayerJohn extends GGPlayer {
 
 	@Override
 	public String getName() {
-		return "john_comp_delib_player";
+		return "_comp_delib_player_john";
 	}
 
 	@Override

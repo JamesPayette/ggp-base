@@ -243,7 +243,7 @@ public class MCTSPlayerWayne extends GGPlayer {
 	 */
 	@Override
 	public String getName() {
-		return "mcts_player_wayne";
+		return "_mcts_player_wayne";
 	}
 
 	private class Node {

@@ -174,7 +174,7 @@ public class NodeMinimaxPlayerWayne extends GGPlayer {
 	 */
 	@Override
 	public String getName() {
-		return "node_minimax_player_wayne";
+		return "_node_minimax_player_wayne";
 	}
 
 

@@ -143,7 +143,7 @@ public class TimeLimitedPlayerJack extends GGPlayer {
 
 	@Override
 	public String getName() {
-		return "jack_time_limited_player";
+		return "_time_limited_player_jack";
 	}
 
 }

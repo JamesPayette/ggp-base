@@ -78,7 +78,7 @@ public class MCTSPlayerJack extends GGPlayer {
 
 	@Override
 	public String getName() {
-		return "jack_MCTS_player";
+		return "_MCTS_player_jack";
 	}
 
 }

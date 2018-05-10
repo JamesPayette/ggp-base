@@ -164,7 +164,7 @@ public class KeepAliveTimeLimitedPlayerJack extends GGPlayer {
 
 	@Override
 	public String getName() {
-		return "jack_time_limited_player_with_keep_alive";
+		return "_time_limited_player_with_keep_alive_jack";
 	}
 
 }

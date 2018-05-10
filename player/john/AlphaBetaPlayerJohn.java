@@ -95,7 +95,7 @@ public class AlphaBetaPlayerJohn extends GGPlayer {
 
 	@Override
 	public String getName() {
-		return "john_alphabeta_player";
+		return "_alphabeta_player_john";
 	}
 }
 

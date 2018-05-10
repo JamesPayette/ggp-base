@@ -179,7 +179,7 @@ public class KeepAliveMinimaxPlayerWayne extends GGPlayer {
 	 */
 	@Override
 	public String getName() {
-		return "keep_alive_minimax_player_wayne";
+		return "_keep_alive_minimax_player_wayne";
 	}
 
 

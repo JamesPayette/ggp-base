@@ -33,6 +33,7 @@ public class OptimizePlayerJack extends GGPlayer {
 			throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException {
 		List<Gdl> rules = getMatch().getGame().getRules();
 		rules = SubgoalReorderer.optimize(rules);
+		rules = RedundantSubgoalRemover.optimize(rules);
 		StateMachine machine = getInitialStateMachine();
 		machine.initialize(rules);
 		switchStateMachine(machine);
@@ -84,7 +85,7 @@ public class OptimizePlayerJack extends GGPlayer {
 
 	@Override
 	public String getName() {
-		return "jack_optimize_player";
+		return "_optimize_player_jack";
 	}
 
 }

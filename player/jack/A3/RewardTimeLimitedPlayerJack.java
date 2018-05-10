@@ -115,7 +115,7 @@ public class RewardTimeLimitedPlayerJack extends GGPlayer {
 
 	private int heuristic(StateMachine machine, MachineState state, Role role)
 			throws GoalDefinitionException {
-		return Math.max(1, machine.findReward(role, state));
+		return machine.findReward(role, state);
 	}
 
 	private boolean isTimedOut() {
@@ -143,7 +143,7 @@ public class RewardTimeLimitedPlayerJack extends GGPlayer {
 
 	@Override
 	public String getName() {
-		return "jack_time_limited_player_with_reward";
+		return "_time_limited_player_with_reward_jack";
 	}
 
 }

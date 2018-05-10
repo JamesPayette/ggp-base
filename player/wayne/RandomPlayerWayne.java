@@ -113,7 +113,7 @@ public class RandomPlayerWayne extends GGPlayer {
 	 */
 	@Override
 	public String getName() {
-		return "random_player_wayne";
+		return "_random_player_wayne";
 	}
 
 

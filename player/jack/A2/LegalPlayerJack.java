@@ -67,7 +67,7 @@ public class LegalPlayerJack extends GGPlayer {
 
 	@Override
 	public String getName() {
-		return "jack_legal_player";
+		return "_legal_player_jack";
 	}
 
 }

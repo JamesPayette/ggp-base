@@ -94,7 +94,7 @@ public class CompulsiveDeliberationJack extends GGPlayer {
 
 	@Override
 	public String getName() {
-		return "jack_compulsive_deliberation_player";
+		return "_compulsive_deliberation_player_jack";
 	}
 
 }

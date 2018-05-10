@@ -179,7 +179,7 @@ public class RewardHeuristicMinimaxPlayerWayne extends GGPlayer {
 	 */
 	@Override
 	public String getName() {
-		return "reward_minimax_player_wayne";
+		return "_reward_minimax_player_wayne";
 	}
 
 

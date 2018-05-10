@@ -162,7 +162,7 @@ public class DepthMinimaxPlayerWayne extends GGPlayer {
 	 */
 	@Override
 	public String getName() {
-		return "depth_minimax_player_wayne";
+		return "_depth_minimax_player_wayne";
 	}
 
 

@@ -9,6 +9,7 @@ import org.ggp.base.util.gdl.grammar.Gdl;
 import org.ggp.base.util.gdl.grammar.GdlLiteral;
 import org.ggp.base.util.gdl.grammar.GdlPool;
 import org.ggp.base.util.gdl.grammar.GdlRule;
+import org.ggp.base.util.gdl.grammar.GdlVariable;
 
 public class SubgoalReorderer {
 
@@ -29,8 +30,9 @@ public class SubgoalReorderer {
 	private static GdlRule reorderSubgoals(GdlRule rule) {
 		List<GdlLiteral> newBody = new ArrayList<GdlLiteral>();
 		List<GdlLiteral> body = new ArrayList<GdlLiteral>(rule.getBody());
+		Set<GdlVariable> boundVars = new HashSet<GdlVariable>();
 		while(!body.isEmpty()) {
-			GdlLiteral next = findNextLiteral(body, newBody);
+			GdlLiteral next = findNextLiteral(body, boundVars);
 			body.remove(next);
 			newBody.add(next);
 		}
@@ -38,40 +40,20 @@ public class SubgoalReorderer {
 		return newGdl;
 	}
 
-	private static GdlLiteral findNextLiteral(List<GdlLiteral> oldLiterals, List<GdlLiteral> newLiterals) {
-		for (GdlLiteral literal : oldLiterals) {
-			int unboundVars = findUnboundVars(literal, newLiterals);
-			if (unboundVars == 0) return literal;
+	private static GdlLiteral findNextLiteral(List<GdlLiteral> literals, Set<GdlVariable> boundVars) {
+		GdlLiteral bestLiteral = null;
+		Set<GdlVariable> bestVars = null;
+		for (GdlLiteral literal : literals) {
+			Set<GdlVariable> vars = GdlUtil.findVars(literal);
+			vars.removeAll(boundVars);
+			if (bestLiteral == null || vars.size() <= bestVars.size()) {
+				bestLiteral = literal;
+				bestVars = vars;
+			}
+			if (bestVars.size() == 0) break;
 		}
-		return oldLiterals.get(0);
-	}
-
-	private static int findUnboundVars(GdlLiteral literal, List<GdlLiteral> newLiterals) {
-		Set<String> bound = findVars(newLiterals);
-		Set<String> ruleVars = findVars(literal);
-		ruleVars.removeAll(bound);
-		return ruleVars.size();
-	}
-
-	private static Set<String> findVars(List<GdlLiteral> newLiterals) {
-		Set<String> bound = new HashSet<String>();
-		for (GdlLiteral literal : newLiterals) {
-			bound.addAll(findVars(literal));
-		}
-		return bound;
-	}
-
-	private static Set<String> findVars(GdlLiteral literal) {
-		Set<String> bound = new HashSet<String>();
-		String literalString = literal.toString();
-		while(true) {
-			int startIndex = literalString.indexOf('?');
-			if (startIndex == -1) break;
-			int endIndex = literalString.indexOf(' ', startIndex);
-			bound.add(literalString.substring(startIndex, endIndex));
-			literalString = literalString.substring(endIndex);
-		}
-		return bound;
+		boundVars.addAll(bestVars);
+		return bestLiteral;
 	}
 
 }

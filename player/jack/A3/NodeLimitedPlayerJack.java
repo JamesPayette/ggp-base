@@ -106,7 +106,7 @@ public class NodeLimitedPlayerJack extends GGPlayer {
 
 	@Override
 	public String getName() {
-		return "jack_node_limited_player";
+		return "_node_limited_player_jack";
 	}
 
 }

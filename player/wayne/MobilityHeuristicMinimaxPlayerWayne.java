@@ -179,7 +179,7 @@ public class MobilityHeuristicMinimaxPlayerWayne extends GGPlayer {
 	 */
 	@Override
 	public String getName() {
-		return "mobility_minimax_player_wayne";
+		return "_mobility_minimax_player_wayne";
 	}
 
 

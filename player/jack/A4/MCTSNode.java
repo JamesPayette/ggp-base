@@ -88,6 +88,12 @@ public class MCTSNode {
 		stateMap.put(state, this);
 	}
 
+	public static void reset() {
+		stateMap = new HashMap<MachineState, MCTSNode>();
+		numDepthCharges = 0;
+		runningAverage = 0.0;
+	}
+
 	/*
 	 * This method runs the "select" method, which expands the tree if necessary, and then returns
 	 * the node from which we'd like to make our depth charges.  Note that we return a node if it's

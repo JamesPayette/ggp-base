@@ -102,7 +102,7 @@ public class DepthLimitedPlayerJack extends GGPlayer  {
 
 	@Override
 	public String getName() {
-		return "jack_depth_limited_player";
+		return "_depth_limited_player_jack";
 	}
 
 }

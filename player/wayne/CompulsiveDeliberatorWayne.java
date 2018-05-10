@@ -142,7 +142,7 @@ public class CompulsiveDeliberatorWayne extends GGPlayer {
 	 */
 	@Override
 	public String getName() {
-		return "compulsive_deliberator_wayne";
+		return "_compulsive_deliberator_wayne";
 	}
 
 
