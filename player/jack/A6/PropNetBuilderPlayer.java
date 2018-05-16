@@ -1,8 +1,6 @@
 package jack.A6;
 
 import org.ggp.base.apps.player.Player;
-import org.ggp.base.util.propnet.architecture.PropNet;
-import org.ggp.base.util.propnet.factory.OptimizingPropNetFactory;
 import org.ggp.base.util.statemachine.MachineState;
 import org.ggp.base.util.statemachine.Move;
 import org.ggp.base.util.statemachine.Role;
@@ -23,7 +21,6 @@ public class PropNetBuilderPlayer extends GGPlayer {
 	private static final long PADDING = 3000;
 	// We use the same simulator throughout, just updating the root node when necessary.
 	private MCTSSimulator simulator;
-	private PropNet propNet;
 
 	public static void main(String[] args) {
 		Player.initialize(new PropNetBuilderPlayer().getName());
@@ -35,11 +32,6 @@ public class PropNetBuilderPlayer extends GGPlayer {
 		StateMachine machine = getStateMachine();
 		MachineState state = getCurrentState();
 		Role role = getRole();
-
-		try { propNet = OptimizingPropNetFactory.create(getMatch().getGame().getRules());
-		} catch (InterruptedException e) { e.printStackTrace(); }
-
-		if (propNet != null) System.out.println("PropNet created. Size:" + propNet.getSize());
 
 		simulator = new MCTSSimulator(machine, state, role);
 		simulator.start();

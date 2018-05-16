@@ -10,7 +10,10 @@ import org.ggp.base.util.gdl.grammar.GdlConstant;
 import org.ggp.base.util.gdl.grammar.GdlLiteral;
 import org.ggp.base.util.gdl.grammar.GdlPool;
 import org.ggp.base.util.gdl.grammar.GdlRule;
+import org.ggp.base.util.gdl.grammar.GdlSentence;
 import org.ggp.base.util.gdl.grammar.GdlVariable;
+import org.ggp.base.util.prover.aima.substitution.Substitution;
+import org.ggp.base.util.prover.aima.unifier.Unifier;
 
 public class RedundantSubgoalRemover {
 
@@ -35,19 +38,51 @@ public class RedundantSubgoalRemover {
 		Set<GdlVariable> headVars = GdlUtil.findVars(rule.getHead());
 		Set<GdlConstant> headConsts = GdlUtil.findConsts(rule.getHead());
 
-		for (GdlLiteral candidate: body) {
+		for (GdlLiteral candidate : body) {
 			Set<GdlLiteral> other = new HashSet<GdlLiteral>(body);
 			other.remove(candidate);
 			Set<GdlVariable> vars = GdlUtil.findVars(other);
 			Set<GdlConstant> consts = GdlUtil.findConsts(other);
 			vars.addAll(headVars);
 			consts.addAll(headConsts);
-			GdlMapping mapping = new GdlMapping(consts, vars);
-			Set<Gdl> mappedOther = GdlUtil.applyMapping(mapping, other);
-			Gdl mappedCandidate = GdlUtil.applyMapping(mapping, candidate);
-			if (!GdlUtil.proveable(mappedCandidate, mappedOther)) newBody.add(candidate);
+			Substitution theta = new Substitution();
+			fillSubstitution(theta, vars, consts);
+			Set<GdlLiteral> otherSub = GdlUtil.applySubstitution(other, theta);
+			GdlLiteral candidateSub = GdlUtil.applySubstitution(candidate, theta);
+			if (!proveable(candidateSub, otherSub))
+				newBody.add(candidate);
 		}
 		return GdlPool.getRule(rule.getHead(), newBody);
+	}
+
+	private static void fillSubstitution(Substitution sub, Set<GdlVariable> vars, Set<GdlConstant> consts) {
+		int counter = 0;
+		for (GdlVariable var : vars) {
+			while (true) {
+				GdlConstant next = GdlPool.getConstant("x_" + counter++);
+				if (!consts.contains(next)) {
+					sub.put(var, next);
+					consts.add(next);
+					break;
+				}
+			}
+		}
+	}
+
+	private static boolean proveable(GdlLiteral candidate, Set<GdlLiteral> others) {
+		if (candidate instanceof GdlSentence)
+			return proveable((GdlSentence) candidate, others);
+		return others.contains(candidate);
+	}
+
+	private static boolean proveable(GdlSentence candidate, Set<GdlLiteral> others) {
+		for (GdlLiteral other : others) {
+			if (other instanceof GdlSentence) {
+				if (Unifier.unify(candidate, (GdlSentence) other) != null)
+					return true;
+			}
+		}
+		return false;
 	}
 
 }

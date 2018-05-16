@@ -1,24 +1,22 @@
 package jack.A5;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
-import org.ggp.base.util.gdl.grammar.Gdl;
 import org.ggp.base.util.gdl.grammar.GdlConstant;
 import org.ggp.base.util.gdl.grammar.GdlDistinct;
 import org.ggp.base.util.gdl.grammar.GdlFunction;
 import org.ggp.base.util.gdl.grammar.GdlLiteral;
 import org.ggp.base.util.gdl.grammar.GdlNot;
 import org.ggp.base.util.gdl.grammar.GdlOr;
-import org.ggp.base.util.gdl.grammar.GdlPool;
 import org.ggp.base.util.gdl.grammar.GdlProposition;
 import org.ggp.base.util.gdl.grammar.GdlRelation;
 import org.ggp.base.util.gdl.grammar.GdlSentence;
 import org.ggp.base.util.gdl.grammar.GdlTerm;
 import org.ggp.base.util.gdl.grammar.GdlVariable;
+import org.ggp.base.util.prover.aima.substituter.Substituter;
+import org.ggp.base.util.prover.aima.substitution.Substitution;
 
 public class GdlUtil {
 
@@ -200,162 +198,18 @@ public class GdlUtil {
 		return consts;
 	}
 
-	// ------------- Apply Mapping -----------------------//
+	// ------------- Apply Substitution -----------------------//
 
-	public static Set<Gdl> applyMapping(GdlMapping mapping, Collection<GdlLiteral> literals) {
-		Set<Gdl> mapped = new HashSet<Gdl>();
-		for (GdlLiteral literal : literals) {
-			mapped.add(applyMapping(mapping, literal));
+	public static Set<GdlLiteral> applySubstitution(Set<GdlLiteral> literals, Substitution theta) {
+		Set<GdlLiteral> literalsSub = new HashSet<GdlLiteral>();
+		for(GdlLiteral literal : literals) {
+			literalsSub.add(Substituter.substitute(literal, theta));
 		}
-		return mapped;
+		return literalsSub;
 	}
 
-	public static Gdl applyMapping(GdlMapping mapping, GdlLiteral literal) {
-		if (literal instanceof GdlSentence) {
-			return applyMapping(mapping, (GdlSentence) literal);
-		} else if (literal instanceof GdlNot) {
-			return applyMapping(mapping, (GdlNot) literal);
-		} else if (literal instanceof GdlDistinct) {
-			return applyMapping(mapping, (GdlDistinct) literal);
-		} else if (literal instanceof GdlOr) {
-			return applyMapping(mapping, (GdlOr) literal);
-		} else {
-			System.out.println("Unable to cast GdlLiteral");
-			return literal;
-		}
-	}
-
-	public static Gdl applyMapping(GdlMapping mapping, GdlSentence sentence) {
-		if (sentence instanceof GdlProposition) {
-			return sentence;
-		} else if (sentence instanceof GdlRelation) {
-			return applyMapping(mapping, (GdlRelation) sentence);
-		} else {
-			System.out.println("Unable to cast GdlSentence");
-			return sentence;
-		}
-	}
-
-	public static Gdl applyMapping(GdlMapping mapping, GdlRelation relation) {
-		List<GdlTerm> newBody = new ArrayList<GdlTerm>();
-		for (GdlTerm term: relation.getBody()) {
-			newBody.add((GdlTerm) applyMapping(mapping, term));
-		}
-		return GdlPool.getRelation(relation.getName(), newBody);
-	}
-
-	public static Gdl applyMapping(GdlMapping mapping, GdlTerm term) {
-		if (term instanceof GdlConstant) {
-			return term;
-		} else if (term instanceof GdlVariable) {
-			return mapping.get((GdlVariable) term);
-		} else if (term instanceof GdlFunction) {
-			return applyMapping(mapping, (GdlFunction) term);
-		} else {
-			System.out.println("Unable to cast GdlTerm");
-			return term;
-		}
-	}
-
-	public static Gdl applyMapping(GdlMapping mapping, GdlFunction function) {
-		List<GdlTerm> newBody = new ArrayList<GdlTerm>();
-		for (GdlTerm term: function.getBody()) {
-			newBody.add((GdlTerm) applyMapping(mapping, term));
-		}
-		return GdlPool.getFunction(function.getName(), newBody);
-	}
-
-	public static Gdl applyMapping(GdlMapping mapping, GdlNot not) {
-		return GdlPool.getNot((GdlLiteral) applyMapping(mapping, not.getBody()));
-	}
-
-	public static Gdl applyMapping(GdlMapping mapping, GdlDistinct distinct) {
-		GdlTerm arg1 = (GdlTerm) applyMapping(mapping, distinct.getArg1());
-		GdlTerm arg2 = (GdlTerm) applyMapping(mapping, distinct.getArg2());
-		return GdlPool.getDistinct(arg1, arg2);
-	}
-
-	public static Gdl applyMapping(GdlMapping mapping, GdlOr or) {
-		List<GdlLiteral> newDisjuncts = new ArrayList<GdlLiteral>();
-		for (GdlLiteral literal: or.getDisjuncts()) {
-			newDisjuncts.add((GdlLiteral) applyMapping(mapping, literal));
-		}
-		return GdlPool.getOr(newDisjuncts);
-	}
-
-	public static boolean proveable(Gdl test, Set<Gdl> againsts) {
-		if (againsts.contains(test)) return true;
-		for(Gdl against : againsts) {
-			if (proveable((GdlLiteral) test, (GdlLiteral) against)) return true;
-		}
-		return false;
-	}
-
-	public static boolean proveable(Gdl test, Gdl against) {
-		if (test instanceof GdlLiteral && against instanceof GdlLiteral) {
-			return proveable((GdlLiteral) test, (GdlLiteral) against);
-		}
-		return false;
-	}
-
-	public static boolean proveable(GdlLiteral test, GdlLiteral against) {
-		if (test instanceof GdlDistinct && against instanceof GdlDistinct) {
-			return proveable((GdlDistinct) test, (GdlDistinct) against);
-		} else if (test instanceof GdlNot && against instanceof GdlNot) {
-			return proveable((GdlNot) test, (GdlNot) against);
-		} else if (test instanceof GdlOr && against instanceof GdlOr) {
-			return proveable((GdlOr) test, (GdlOr) against);
-		} else if (test instanceof GdlSentence && against instanceof GdlSentence) {
-			return proveable((GdlSentence) test, (GdlSentence) against);
-		}
-		return false;
-	}
-
-	public static boolean proveable(GdlDistinct test, GdlDistinct against) {
-		if(!proveable(test.getArg1(), against.getArg1())) return false;
-		if(!proveable(test.getArg2(), against.getArg2())) return false;
-		return true;
-	}
-
-	public static boolean proveable(GdlNot test, GdlNot against) {
-		return proveable(test.getBody(), against.getBody());
-	}
-
-	public static boolean proveable(GdlOr test, GdlOr against) {
-		int testLen = test.arity();
-		int againstLen = test.arity();
-		if (testLen != againstLen) return false;
-		for(int i = 0; i < testLen; i++) {
-			if(!proveable(test.get(i), against.get(i))) return false;
-		}
-		return true;
-	}
-
-	public static boolean proveable(GdlSentence test, GdlSentence against) {
-		int testLen = test.arity();
-		int againstLen = against.arity();
-		if (testLen != againstLen) return false;
-		for(int i = 0; i < testLen; i++) {
-			if(!proveable(test.get(i), against.get(i))) return false;
-		}
-		return true;
-	}
-
-	public static boolean proveable(GdlTerm test, GdlTerm against) {
-		if(test instanceof GdlVariable) return true;
-		if(test instanceof GdlConstant && against instanceof GdlConstant) return test == against;
-		if(test instanceof GdlFunction && against instanceof GdlFunction) return proveable((GdlFunction) test, (GdlFunction) against);
-		return false;
-	}
-
-	public static boolean proveable(GdlFunction test, GdlFunction against) {
-		int testLen = test.arity();
-		int againstLen = against.arity();
-		if (testLen != againstLen) return false;
-		for(int i = 0; i < testLen; i++) {
-			if(!proveable(test.get(i), against.get(i))) return false;
-		}
-		return true;
+	public static GdlLiteral applySubstitution(GdlLiteral literal, Substitution theta) {
+		return Substituter.substitute(literal, theta);
 	}
 
 }

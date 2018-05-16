@@ -374,6 +374,7 @@ public class MCTSNode {
 				}
 			}
 		}
+		System.out.println("So far, we've done " + numDepthCharges + " depth charges.");
 		return legals.get(bestIndex);
 	}
 

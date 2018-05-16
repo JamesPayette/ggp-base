@@ -32,8 +32,13 @@ public class OptimizePlayerJack extends GGPlayer {
 	public void start(long timeout)
 			throws TransitionDefinitionException, MoveDefinitionException, GoalDefinitionException {
 		List<Gdl> rules = getMatch().getGame().getRules();
+		System.out.println(rules);
 		rules = SubgoalReorderer.optimize(rules);
+		System.out.println(rules);
 		rules = RedundantSubgoalRemover.optimize(rules);
+		System.out.println(rules);
+		rules = RedundantRuleRemover.optimize(rules);
+		System.out.println(rules);
 		StateMachine machine = getInitialStateMachine();
 		machine.initialize(rules);
 		switchStateMachine(machine);
