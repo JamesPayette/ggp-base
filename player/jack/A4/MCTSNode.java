@@ -38,6 +38,7 @@ public class MCTSNode {
 	// games have much costlier depth charges than others.
 	private static int numDepthCharges = 0;
 	private static double runningAverage = 0.0;
+	private static Object statsLock = new Object();
 
 	// game-wide state machine, helpful to have a reference in the node
 	private StateMachine machine;
@@ -213,7 +214,7 @@ public class MCTSNode {
 			long start = System.currentTimeMillis();
 			MachineState finalState = findRandomFinalState();
 			long end = System.currentTimeMillis();
-			updateDepthChargeStats(end - start);
+			updateDepthChargeStats(Math.max(10L, end - start));
 			for (Role r : machine.findRoles()) {
 				rewards.put(r, rewards.getOrDefault(r, 0.0) + machine.getGoal(finalState, r));
 			}
@@ -249,8 +250,10 @@ public class MCTSNode {
 	 * and update the running average
 	 */
 	private void updateDepthChargeStats(long newTime) {
-		numDepthCharges++;
-		runningAverage += (((double) newTime - runningAverage) / numDepthCharges);
+		synchronized(statsLock) {
+			numDepthCharges++;
+			runningAverage += (((double) newTime - runningAverage) / numDepthCharges);
+		}
 	}
 
 	/*
@@ -266,7 +269,7 @@ public class MCTSNode {
 		if (numDepthCharges == 0) {
 			return COUNT;
 		} else {
-			return Math.max(1, (int) (500 / runningAverage));
+			return Math.max(1, (int) (500L / runningAverage));
 		}
 	}
 
