@@ -62,6 +62,7 @@ public class MCTSSimulator extends Thread {
 				if (!stateQueue.isEmpty()) setRoot();
 				if (!timeoutQueue.isEmpty()) timeout = timeoutQueue.take();
 				if (System.currentTimeMillis() >= timeout) {
+					System.out.println("MCTS timeout. Placing best move in queue.");
 					timeout = Long.MAX_VALUE;
 					moveQueue.put(rootNode.findBestChild(role));
 				}

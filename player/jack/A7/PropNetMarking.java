@@ -50,4 +50,13 @@ public class PropNetMarking {
 		return true;
 	}
 
+	@Override
+	public String toString() {
+		String retVal = "";
+		for (Map.Entry<Proposition, Boolean> entry : marking.entrySet()) {
+			retVal += "|" + entry.getKey().toString() + ":" + entry.getValue().toString();
+		}
+		return retVal;
+	}
+
 }

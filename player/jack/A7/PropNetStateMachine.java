@@ -37,7 +37,7 @@ public class PropNetStateMachine extends StateMachine {
 	 */
 
 	@Override
-	public void initialize(List<Gdl> description) {
+	public synchronized void initialize(List<Gdl> description) {
 		try {
 			propNet = OptimizingPropNetFactory.create(description);
 			roles = propNet.getRoles();
@@ -52,7 +52,7 @@ public class PropNetStateMachine extends StateMachine {
 	 * proposition for the state.
 	 */
 	@Override
-	public boolean isTerminal(MachineState state) {
+	public synchronized boolean isTerminal(MachineState state) {
 		resetMachine();
 		markBases(state);
 		markPropNet();
@@ -66,20 +66,19 @@ public class PropNetStateMachine extends StateMachine {
 	 * GoalDefinitionException because the goal is ill-defined.
 	 */
 	@Override
-	public int getGoal(MachineState state, Role role) throws GoalDefinitionException {
+	public synchronized int getGoal(MachineState state, Role role) throws GoalDefinitionException {
 		resetMachine();
 		markBases(state);
 		markPropNet();
 		Set<Proposition> gps = propNet.getGoalPropositions().get(role);
 		Proposition goal = null;
-		boolean error = false;
 		for (Proposition gp : gps) {
 			if (gp.getValue()) {
-				if (goal != null) error = true;
+				if (goal != null) throw new GoalDefinitionException(state, role);
 				goal = gp;
 			}
 		}
-		if (goal == null || error) throw new GoalDefinitionException(state, role);
+		if (goal == null) throw new GoalDefinitionException(state, role);
 		return getGoalValue(goal);
 	}
 
@@ -89,7 +88,7 @@ public class PropNetStateMachine extends StateMachine {
 	 * resulting state.
 	 */
 	@Override
-	public MachineState getInitialState() {
+	public synchronized MachineState getInitialState() {
 		resetMachine();
 		propNet.getInitProposition().setValue(true);
 		markPropNet();
@@ -100,7 +99,7 @@ public class PropNetStateMachine extends StateMachine {
 	 * Computes all possible actions for role.
 	 */
 	@Override
-	public List<Move> findActions(Role role) throws MoveDefinitionException {
+	public synchronized List<Move> findActions(Role role) throws MoveDefinitionException {
 		List<Move> legals = new ArrayList<Move>();
 		Set<Proposition> legalProps = propNet.getLegalPropositions().get(role);
 		for (Proposition lp : legalProps) {
@@ -116,7 +115,7 @@ public class PropNetStateMachine extends StateMachine {
 	 * Computes the legal moves for role in state.
 	 */
 	@Override
-	public List<Move> getLegalMoves(MachineState state, Role role) throws MoveDefinitionException {
+	public synchronized List<Move> getLegalMoves(MachineState state, Role role) throws MoveDefinitionException {
 		resetMachine();
 		markBases(state);
 		markPropNet();
@@ -137,7 +136,7 @@ public class PropNetStateMachine extends StateMachine {
 	 * Computes the next state given state and the list of moves.
 	 */
 	@Override
-	public MachineState getNextState(MachineState state, List<Move> moves) throws TransitionDefinitionException {
+	public synchronized MachineState getNextState(MachineState state, List<Move> moves) throws TransitionDefinitionException {
 		resetMachine();
 		markActions(moves);
 		markBases(state);
