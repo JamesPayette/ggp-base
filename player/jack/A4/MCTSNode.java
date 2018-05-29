@@ -250,7 +250,7 @@ public class MCTSNode {
 	 */
 	private void updateDepthChargeStats(long newTime) {
 		numDepthCharges++;
-		runningAverage += (((double) newTime - runningAverage) / numDepthCharges);
+		runningAverage += (((double) Math.max(newTime, 10) - runningAverage) / numDepthCharges);
 	}
 
 	/*

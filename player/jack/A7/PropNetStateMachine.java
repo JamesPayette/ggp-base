@@ -2,6 +2,7 @@ package jack.A7;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -53,10 +54,9 @@ public class PropNetStateMachine extends StateMachine {
 	 */
 	@Override
 	public synchronized boolean isTerminal(MachineState state) {
-		resetMachine();
-		markBases(state);
-		markPropNet();
-		return propNet.getTerminalProposition().getValue();
+		PropNetMachineState propNetState = (PropNetMachineState)state;
+		markState(propNetState);
+		return propNetState.isTerminal();
 	}
 
 	/**
@@ -67,19 +67,9 @@ public class PropNetStateMachine extends StateMachine {
 	 */
 	@Override
 	public synchronized int getGoal(MachineState state, Role role) throws GoalDefinitionException {
-		resetMachine();
-		markBases(state);
-		markPropNet();
-		Set<Proposition> gps = propNet.getGoalPropositions().get(role);
-		Proposition goal = null;
-		for (Proposition gp : gps) {
-			if (gp.getValue()) {
-				if (goal != null) throw new GoalDefinitionException(state, role);
-				goal = gp;
-			}
-		}
-		if (goal == null) throw new GoalDefinitionException(state, role);
-		return getGoalValue(goal);
+		PropNetMachineState propNetState = (PropNetMachineState)state;
+		markState(propNetState);
+		return propNetState.getGoalValue(role);
 	}
 
 	/**
@@ -116,20 +106,9 @@ public class PropNetStateMachine extends StateMachine {
 	 */
 	@Override
 	public synchronized List<Move> getLegalMoves(MachineState state, Role role) throws MoveDefinitionException {
-		resetMachine();
-		markBases(state);
-		markPropNet();
-		List<Move> legals = new ArrayList<Move>();
-		Set<Proposition> legalProps = propNet.getLegalPropositions().get(role);
-		for (Proposition lp : legalProps) {
-			if (lp.getValue()) {
-				Proposition ip = propNet.getLegalInputMap().get(lp);
-				GdlSentence sentence = ip.getName();
-				legals.add(new Move(sentence.get(1)));
-			}
-		}
-		if (legals.size() == 0) throw new MoveDefinitionException(state, role);
-		return legals;
+		PropNetMachineState propNetState = (PropNetMachineState)state;
+		markState(propNetState);
+		return propNetState.getLegalMoves(role);
 	}
 
 	/**
@@ -171,6 +150,56 @@ public class PropNetStateMachine extends StateMachine {
 			bases.add(p);
 		}
 		return new PropNetMachineState(bases);
+	}
+
+	private void markState(PropNetMachineState state) {
+		if (state.isMarked()) return;
+
+		resetMachine();
+		markBases(state);
+		markPropNet();
+
+		Map<Role, List<Move>> legalMoves = new HashMap<Role, List<Move>>();
+		Map<Role, Integer> goalValues = new HashMap<Role, Integer>();
+		for (Role role : roles) {
+			// Get legal moves for each role
+			List<Move> legals = new ArrayList<Move>();
+			Set<Proposition> legalProps = propNet.getLegalPropositions().get(role);
+			for (Proposition lp : legalProps) {
+				if (lp.getValue()) {
+					Proposition ip = propNet.getLegalInputMap().get(lp);
+					GdlSentence sentence = ip.getName();
+					legals.add(new Move(sentence.get(1)));
+				}
+			}
+			if (legals.size() > 0) {
+				legalMoves.put(role, legals);
+			}
+
+			// Get goal values for each role
+			Set<Proposition> gps = propNet.getGoalPropositions().get(role);
+			Proposition goal = null;
+			boolean error = false;
+			for (Proposition gp : gps) {
+				if (gp.getValue()) {
+					if (goal != null) {
+						error = true;
+						break;
+					}
+					goal = gp;
+				}
+			}
+			if (goal != null && !error) {
+				goalValues.put(role, getGoalValue(goal));
+			}
+		}
+		state.setLegalMoves(legalMoves);
+		state.setGoalValues(goalValues);
+
+		// Get terminal value
+		state.setTerminal(propNet.getTerminalProposition().getValue());
+
+		state.setMarked(true);
 	}
 
 	private void markBases(MachineState state) {
