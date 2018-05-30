@@ -1,4 +1,7 @@
-package jack.A7;
+package wayne.A8;
+
+import jack.A7.PropNetMachineState;
+import jack.A7.TopologicalSorter;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -25,7 +28,7 @@ import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 import org.ggp.base.util.statemachine.implementation.prover.query.ProverQueryBuilder;
 
-public class PropNetStateMachine extends StateMachine {
+public class FactoringPropNetStateMachine extends StateMachine {
 	/** The underlying proposition network */
 	private PropNet propNet;
 	/** The topological ordering of the propositions */
@@ -43,6 +46,7 @@ public class PropNetStateMachine extends StateMachine {
 		try {
 			propNet = OptimizingPropNetFactory.create(description);
 			roles = propNet.getRoles();
+			singleFactor();
 			ordering = getOrdering();
 		} catch (InterruptedException e) {
 			throw new RuntimeException(e);
@@ -83,8 +87,7 @@ public class PropNetStateMachine extends StateMachine {
 		resetMachine();
 		propNet.getInitProposition().setValue(true);
 		markPropNet();
-		MachineState nextState = getStateFromBase();
-		return nextState;
+		return getStateFromBase();
 	}
 
 	/**
@@ -242,35 +245,48 @@ public class PropNetStateMachine extends StateMachine {
 		return inputProps;
 	}
 
-	//******************FACTORING************************************//
-	public void factor() {
-		List<Set<Component>> factors = findIndependentFactors();
-	}
+	// Factors the PropNet when termination and goals depend on only a single factor.
+	// Performs backprop from terminal and goal states to identify dependencies, then trims
+	// all other propositions / actions.
+	private void singleFactor() {
+		System.out.println("Single factoring propnet with " + propNet.getComponents().size() + " components.");
 
-	private List<Set<Component>> findIndependentFactors() {
-		List<Set<Component>> factors = new ArrayList<Set<Component>>();
-		Set<Component> seen = new HashSet<Component>();
-		for(Component c : propNet.getComponents()) {
-			if (seen.contains(c)) continue;
-			else {
-				Set<Component> cc = new HashSet<Component>();
-				addToFactor(c, cc, seen);
-				factors.add(cc);
+		// Get dependencies of terminal and goal states.
+		Collection<Component> dependencies = new HashSet<Component>();
+		Proposition termination = propNet.getTerminalProposition();
+		dependencySearch(termination, dependencies);
+		for (Set<Proposition> roleGoalProps : propNet.getGoalPropositions().values()) {
+			for (Proposition goalProp : roleGoalProps) {
+				dependencySearch(goalProp, dependencies);
 			}
 		}
-		return factors;
+
+		// We now know what actions are actually relevant to gameplay. Add in dependencies for
+		// determination of legality of actions.
+		for (Proposition ip : propNet.getInputPropositions().values()) {
+			if (dependencies.contains(ip)) {
+				dependencySearch(propNet.getLegalInputMap().get(ip), dependencies);
+			}
+		}
+
+		// Remove all other components from the propnet.
+		int counter = 0;
+		List<Component> components = new ArrayList<Component>(propNet.getComponents());
+		for (Component component : components) {
+			if (!dependencies.contains(component)) {
+				counter++;
+				propNet.removeComponent(component);
+			}
+		}
+		System.out.println("Single factoring complete. Removed " + counter + " components.");
 	}
 
-	private void addToFactor(Component c, Set<Component> cc, Set<Component> seen) {
-		if (seen.contains(c)) return;
-		cc.add(c);
-		seen.add(c);
-		for(Component cPrime : c.getInputs()) {
-			addToFactor(cPrime, cc, seen);
-		}
-		for(Component cPrime : c.getOutputs()) {
-			addToFactor(cPrime, cc, seen);
+	private void dependencySearch(Component component, Collection<Component> dependencies) {
+		if (dependencies.contains(component)) return;
+		dependencies.add(component);
+
+		for (Component dependency : component.getInputs()) {
+			dependencySearch(dependency, dependencies);
 		}
 	}
-
 }

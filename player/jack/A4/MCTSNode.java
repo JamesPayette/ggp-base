@@ -268,10 +268,8 @@ public class MCTSNode {
 	 * depth charges, and update the running average
 	 */
 	private void updateDepthChargeStats(long newTime) {
-		synchronized (statsLock) {
-			numDepthCharges++;
-			runningAverage += (((double) newTime - runningAverage) / numDepthCharges);
-		}
+		numDepthCharges++;
+		runningAverage += (((double) Math.max(newTime, 10) - runningAverage) / numDepthCharges);
 	}
 
 	/*
