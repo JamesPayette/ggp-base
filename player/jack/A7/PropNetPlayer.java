@@ -5,7 +5,6 @@ import org.ggp.base.util.statemachine.MachineState;
 import org.ggp.base.util.statemachine.Move;
 import org.ggp.base.util.statemachine.Role;
 import org.ggp.base.util.statemachine.StateMachine;
-import org.ggp.base.util.statemachine.cache.CachedStateMachine;
 import org.ggp.base.util.statemachine.exceptions.GoalDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
@@ -29,6 +28,7 @@ public class PropNetPlayer extends GGPlayer {
 
 	// We give 5 seconds of padding just to be safe
 	private static final long PADDING = 3000;
+	private static final long SHORT_PADDING = 1000;
 	// We use the same simulator throughout, just updating the root node when necessary.
 	private MCTSSimulator simulator;
 
@@ -83,14 +83,14 @@ public class PropNetPlayer extends GGPlayer {
 		StateMachine machine = getStateMachine();
 		MachineState state = getCurrentState();
 		Role role = getRole();
-		simulator.setStateAndTimeout(state, timeout - PADDING);
-		Move bestMove = simulator.getBestMove();
-		if (bestMove != null) {
-			System.out.println("Using MCTS");
-		} else {
-			System.out.println("Using Random Move");
-			bestMove = machine.findLegalx(role, state);
-		}
+//		simulator.setStateAndTimeout(state, timeout - PADDING);
+//		Move bestMove = simulator.getBestMove(timeout - System.currentTimeMillis() - SHORT_PADDING);
+//		if (bestMove != null) {
+//			System.out.println("Using MCTS");
+//		} else {
+//			System.out.println("Using Random Move");
+		Move bestMove = machine.findLegalx(role, state);
+//		}
 		System.out.println("Move is: " + bestMove + "\n");
 		return bestMove;
 	}
@@ -113,7 +113,7 @@ public class PropNetPlayer extends GGPlayer {
 
 	@Override
 	public StateMachine getInitialStateMachine() {
-		return new CachedStateMachine(new PropNetStateMachine());
+		return new PropNetStateMachine();
 	}
 
 	@Override

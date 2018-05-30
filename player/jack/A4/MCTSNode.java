@@ -26,15 +26,21 @@ import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 
 public class MCTSNode {
 
-	// A constant, the number of depth charges to use if there are no running statistics
-	private static final int COUNT = 4;
+	// A constant, the number of depth charges to use if there are no running
+	// statistics
+	private static final int COUNT = 1;
 
-	// A class variable, maps machine states to MCTSNodes. We use this to "unify" parts of the tree
-	// if two paths lead to the same state.  It also makes lookup for changing the root node easier
-	// TODO: Verify that the tree is acyclic.  If not, this could cause infinite lopps
+	// A class variable, maps machine states to MCTSNodes. We use this to "unify"
+	// parts of the tree
+	// if two paths lead to the same state. It also makes lookup for changing the
+	// root node easier
+	// TODO: Verify that the tree is acyclic. If not, this could cause infinite
+	// lopps
 	private static Map<MachineState, MCTSNode> stateMap = new HashMap<MachineState, MCTSNode>();
-	// These class variables keep the running statistics for depth charges.  They allow us to make
-	// informed decisions on how many depth charges to run on each iteration.  This is necessary, as some
+	// These class variables keep the running statistics for depth charges. They
+	// allow us to make
+	// informed decisions on how many depth charges to run on each iteration. This
+	// is necessary, as some
 	// games have much costlier depth charges than others.
 	private static int numDepthCharges = 0;
 	private static double runningAverage = 0.0;
@@ -42,30 +48,35 @@ public class MCTSNode {
 
 	// game-wide state machine, helpful to have a reference in the node
 	private StateMachine machine;
-	// state for which this node corresponds.  Under the acyclic assumption, there is a direct mapping from
+	// state for which this node corresponds. Under the acyclic assumption, there is
+	// a direct mapping from
 	// state to node
 	private MachineState state;
 	// A node can have multiples parents if multiple states lead to the same place
 	// TODO: Check if this even happens (if length is ever greater than 1)
-	// An empty list here implies that this is the root node of the working MCTS tree
+	// An empty list here implies that this is the root node of the working MCTS
+	// tree
 	private List<MCTSNode> parents;
 	// A mapping from each role to its list of possible moves for this state
 	private Map<Role, List<Move>> legalMap;
-	// A mapping from each role to the list of total utilities for this state.  The indices into this list
+	// A mapping from each role to the list of total utilities for this state. The
+	// indices into this list
 	// correspond with the indices of the moves in the legal map.
 	private Map<Role, List<Double>> utilityMap;
-	// A mapping from each role to the list of counts for this state.  The indices into this list
+	// A mapping from each role to the list of counts for this state. The indices
+	// into this list
 	// correspond with the indices of the moves in the legal map.
 	private Map<Role, List<Double>> countMap;
-	// List of children nodes.  It is a map from legal joint moves to the node that results from taking
+	// List of children nodes. It is a map from legal joint moves to the node that
+	// results from taking
 	// this joint move in the current state
 	private Map<List<Move>, MCTSNode> children;
 
 	/*
-	 * This method initializes the node.
-	 * Important to note is that if this is a terminal state, we set the legal moves to be an
-	 * empty list.  This allows the MCTS selection process to stop when we want it to.
-	 * All utilities and counts are initialized to 0.
+	 * This method initializes the node. Important to note is that if this is a
+	 * terminal state, we set the legal moves to be an empty list. This allows the
+	 * MCTS selection process to stop when we want it to. All utilities and counts
+	 * are initialized to 0.
 	 */
 	public MCTSNode(StateMachine machine, MachineState state) throws MoveDefinitionException {
 		this.machine = machine;
@@ -96,17 +107,19 @@ public class MCTSNode {
 	}
 
 	/*
-	 * This method runs the "select" method, which expands the tree if necessary, and then returns
-	 * the node from which we'd like to make our depth charges.  Note that we return a node if it's
-	 * a terminal state.  This will happen when we get to the end of the tree, and thus the tree stops
-	 * but we continue to update statistics.
+	 * This method runs the "select" method, which expands the tree if necessary,
+	 * and then returns the node from which we'd like to make our depth charges.
+	 * Note that we return a node if it's a terminal state. This will happen when we
+	 * get to the end of the tree, and thus the tree stops but we continue to update
+	 * statistics.
 	 *
-	 * We return "this" if the state is terminal.
-	 * We then check to see if we've expanded all of the child nodes of this node, which are
-	 * all of the legal joint moves.  If any of them are not expanded, we expand them and return them.
-	 * If all child nodes are expanded, we select the best move for each role, and use this list as the
-	 * "best" joint move from this state.  We get the node corresponding to this joint move from the children
-	 * map, and recursively return the select call on this node.
+	 * We return "this" if the state is terminal. We then check to see if we've
+	 * expanded all of the child nodes of this node, which are all of the legal
+	 * joint moves. If any of them are not expanded, we expand them and return them.
+	 * If all child nodes are expanded, we select the best move for each role, and
+	 * use this list as the "best" joint move from this state. We get the node
+	 * corresponding to this joint move from the children map, and recursively
+	 * return the select call on this node.
 	 */
 	public MCTSNode select() throws TransitionDefinitionException, MoveDefinitionException {
 		if (machine.findTerminalp(state)) {
@@ -127,12 +140,12 @@ public class MCTSNode {
 	}
 
 	/*
-	 * This is the method that "expands" the tree.  We first check to see if there already exists a node
-	 * corresponding to the state.  If so, we simply get this node from the global map.  Otherwise, we
-	 * create a new node with this state.  We then do some housekeeping, adding "this" as a parent to the
-	 * node, and adding this newly created node to the children map of "this" with the given jointMove as
-	 * the key.
-	 * The found/newly created child is returned.
+	 * This is the method that "expands" the tree. We first check to see if there
+	 * already exists a node corresponding to the state. If so, we simply get this
+	 * node from the global map. Otherwise, we create a new node with this state. We
+	 * then do some housekeeping, adding "this" as a parent to the node, and adding
+	 * this newly created node to the children map of "this" with the given
+	 * jointMove as the key. The found/newly created child is returned.
 	 */
 	private MCTSNode createChild(MachineState nextState, List<Move> jointMove) throws MoveDefinitionException {
 		MCTSNode child = findOrCreateNodeByState(nextState);
@@ -142,8 +155,8 @@ public class MCTSNode {
 	}
 
 	/*
-	 * This method selects the best move for a role in this state.  It essentially just fetches the correct
-	 * lists and masses them on to a more general method.
+	 * This method selects the best move for a role in this state. It essentially
+	 * just fetches the correct lists and masses them on to a more general method.
 	 */
 	private Move selectMoveForRole(Role role) {
 		List<Move> legals = legalMap.get(role);
@@ -153,11 +166,12 @@ public class MCTSNode {
 	}
 
 	/*
-	 * This method selects the best move from a list of legal moves and the utilites and counts
-	 * collected thus far.  This uses a select function, which is a combination of exploration
-	 * and exploitation.
+	 * This method selects the best move from a list of legal moves and the utilites
+	 * and counts collected thus far. This uses a select function, which is a
+	 * combination of exploration and exploitation.
 	 *
-	 * TODO: Check the assumption that every player is going to explore/exploit. Is this correct?
+	 * TODO: Check the assumption that every player is going to explore/exploit. Is
+	 * this correct?
 	 */
 	private Move selectMove(List<Move> legals, List<Double> utilities, List<Double> counts) {
 		Move bestMove = null;
@@ -173,8 +187,8 @@ public class MCTSNode {
 	}
 
 	/*
-	 * This is the chosen select function for our Monte Carlo Tree Search player.  It's the classic MCB
-	 * formula, and seems to work pretty well.
+	 * This is the chosen select function for our Monte Carlo Tree Search player.
+	 * It's the classic MCB formula, and seems to work pretty well.
 	 *
 	 * TODO: Check if this is tuneable, and see if this helps.
 	 */
@@ -186,8 +200,8 @@ public class MCTSNode {
 	}
 
 	/*
-	 * Private helper method to find the sum of numbers in a list.  This is how we find the number
-	 * of parent visits.
+	 * Private helper method to find the sum of numbers in a list. This is how we
+	 * find the number of parent visits.
 	 */
 	private double getSum(List<Double> counts) {
 		double sum = 0;
@@ -197,14 +211,17 @@ public class MCTSNode {
 	}
 
 	/*
-	 * This method runs the simulate method.  It returns a map from role to double, which maps role to the
-	 * average utility found in the depth charges in this simulation.
+	 * This method runs the simulate method. It returns a map from role to double,
+	 * which maps role to the average utility found in the depth charges in this
+	 * simulation.
 	 *
-	 * We have a helper method that returns the number of depth charges we should use for this iteration.
-	 * For each of the inner iterations, we run a depth charge, record its length, update the global depth
-	 * charge stats, and then update the stats for each role.
+	 * We have a helper method that returns the number of depth charges we should
+	 * use for this iteration. For each of the inner iterations, we run a depth
+	 * charge, record its length, update the global depth charge stats, and then
+	 * update the stats for each role.
 	 *
-	 * The final loop simply divides the utility counts by the count, so that we get an average.
+	 * The final loop simply divides the utility counts by the count, so that we get
+	 * an average.
 	 */
 	public Map<Role, Double> simulate()
 			throws GoalDefinitionException, TransitionDefinitionException, MoveDefinitionException {
@@ -226,9 +243,10 @@ public class MCTSNode {
 	}
 
 	/*
-	 * This method is backpropagation.  It's a bit confusing honestly, but the idea is that for each node,
-	 * we want to update is parent nodes(s)' statistics based on what we found.  We run this recursively up
-	 * the tree until we get to the root.
+	 * This method is backpropagation. It's a bit confusing honestly, but the idea
+	 * is that for each node, we want to update is parent nodes(s)' statistics based
+	 * on what we found. We run this recursively up the tree until we get to the
+	 * root.
 	 */
 	public void backpropagate(Map<Role, Double> rewards) {
 		for (MCTSNode parent : parents) {
@@ -246,24 +264,26 @@ public class MCTSNode {
 	}
 
 	/*
-	 * This method updates the depth charge stats.  We simple increment the number of depth charges,
-	 * and update the running average
+	 * This method updates the depth charge stats. We simple increment the number of
+	 * depth charges, and update the running average
 	 */
 	private void updateDepthChargeStats(long newTime) {
-		synchronized(statsLock) {
+		synchronized (statsLock) {
 			numDepthCharges++;
 			runningAverage += (((double) newTime - runningAverage) / numDepthCharges);
 		}
 	}
 
 	/*
-	 * This method calculates the number of depth charges we should make on an iteration. It uses the
-	 * running statistics to decide how many to run.  We default to four, but otherwise we do as many as
-	 * we think will complete in half a second. We need to do at least one, otherwise the whole process
-	 * is pointless.
+	 * This method calculates the number of depth charges we should make on an
+	 * iteration. It uses the running statistics to decide how many to run. We
+	 * default to four, but otherwise we do as many as we think will complete in
+	 * half a second. We need to do at least one, otherwise the whole process is
+	 * pointless.
 	 *
-	 * This method helps to make sure we don't accidentally time out in very deep games.  It allows us to
-	 * still make a number of depth charges in small games, but not too many in big ones.
+	 * This method helps to make sure we don't accidentally time out in very deep
+	 * games. It allows us to still make a number of depth charges in small games,
+	 * but not too many in big ones.
 	 */
 	private int getCount() {
 		if (numDepthCharges == 0) {
@@ -274,12 +294,14 @@ public class MCTSNode {
 	}
 
 	/*
-	 * This method is essentially a reverse lookup in the map from jointMove to node.
-	 * We use it in backprop.  It essentially loops through the keys in the map, and then checks
-	 * to see if the value associated with the key is the node we're looking for.  If so, we return this
-	 * key. See backpropagation() to see why we need this.
+	 * This method is essentially a reverse lookup in the map from jointMove to
+	 * node. We use it in backprop. It essentially loops through the keys in the
+	 * map, and then checks to see if the value associated with the key is the node
+	 * we're looking for. If so, we return this key. See backpropagation() to see
+	 * why we need this.
 	 *
-	 * TODO: Handle errors better than returning null, which probably crashes the program.
+	 * TODO: Handle errors better than returning null, which probably crashes the
+	 * program.
 	 */
 	private List<Move> getJointMove(MCTSNode node) {
 		for (List<Move> jointMove : children.keySet()) {
@@ -291,11 +313,10 @@ public class MCTSNode {
 	}
 
 	/*
-	 * This method looks up a state in the globabl statemap and returns it if it exists.
-	 * Otherwise, it creates a new node and returns that.
+	 * This method looks up a state in the globabl statemap and returns it if it
+	 * exists. Otherwise, it creates a new node and returns that.
 	 */
-	public MCTSNode findOrCreateNodeByState(MachineState state)
-			throws MoveDefinitionException {
+	public MCTSNode findOrCreateNodeByState(MachineState state) throws MoveDefinitionException {
 		MCTSNode node;
 		if (stateMap.containsKey(state)) {
 			node = stateMap.get(state);
@@ -306,16 +327,17 @@ public class MCTSNode {
 	}
 
 	/*
-	 * This method sets this node to be the root.  It does this by simply setting the parents
-	 * array to an empty list.  This will cause the backpropagation to return, ending the recursion
+	 * This method sets this node to be the root. It does this by simply setting the
+	 * parents array to an empty list. This will cause the backpropagation to
+	 * return, ending the recursion
 	 */
 	public void setRoot() {
 		parents = new ArrayList<MCTSNode>();
 	}
 
 	/*
-	 * This method adds a parent to the parents list of this node.  It does so safely, only adding if
-	 * the parent is not already in the list.
+	 * This method adds a parent to the parents list of this node. It does so
+	 * safely, only adding if the parent is not already in the list.
 	 */
 	public void addParent(MCTSNode parent) {
 		if (!parents.contains(parent)) {
@@ -324,7 +346,8 @@ public class MCTSNode {
 	}
 
 	/*
-	 * This method updates utility statistics for a given role and given move with a given award.
+	 * This method updates utility statistics for a given role and given move with a
+	 * given award.
 	 */
 	private void updateUtility(Role role, Move move, double reward) {
 		int moveIndex = getMoveIndex(legalMap.get(role), move);
@@ -333,8 +356,8 @@ public class MCTSNode {
 	}
 
 	/*
-	 * This method returns the index of the given move into the legals list. This is used in updating
-	 * utility and counts, all in backprop.
+	 * This method returns the index of the given move into the legals list. This is
+	 * used in updating utility and counts, all in backprop.
 	 *
 	 * TODO: Handle the error state better
 	 */
@@ -348,7 +371,8 @@ public class MCTSNode {
 	}
 
 	/*
-	 * This method updates count statistics for a given role and given move (incrementing by 1).
+	 * This method updates count statistics for a given role and given move
+	 * (incrementing by 1).
 	 */
 	private void updateCount(Role role, Move move) {
 		int moveIndex = getMoveIndex(legalMap.get(role), move);
@@ -357,9 +381,10 @@ public class MCTSNode {
 	}
 
 	/*
-	 * This move find the best move for a given role.  We use this as a way of calculating the optimal
-	 * move for a role.  We use the move that has the highest average utility.  Although it looks relatively
-	 * complex, it's actually pretty straightforward how this is implemented.
+	 * This move find the best move for a given role. We use this as a way of
+	 * calculating the optimal move for a role. We use the move that has the highest
+	 * average utility. Although it looks relatively complex, it's actually pretty
+	 * straightforward how this is implemented.
 	 */
 	public Move findBestChild(Role role) {
 		List<Move> legals = legalMap.get(role);
@@ -382,7 +407,8 @@ public class MCTSNode {
 	}
 
 	/*
-	 * This method completes a depth charge, simulating random joint moves until a final state is found.
+	 * This method completes a depth charge, simulating random joint moves until a
+	 * final state is found.
 	 */
 	private MachineState findRandomFinalState() throws TransitionDefinitionException, MoveDefinitionException {
 		MachineState randState = state;

@@ -3,6 +3,7 @@ package jack.A4;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import org.ggp.base.util.statemachine.MachineState;
 import org.ggp.base.util.statemachine.Move;
@@ -64,7 +65,8 @@ public class MCTSSimulator extends Thread {
 				if (System.currentTimeMillis() >= timeout) {
 					System.out.println("MCTS timeout. Placing best move in queue.");
 					timeout = Long.MAX_VALUE;
-					moveQueue.put(rootNode.findBestChild(role));
+					moveQueue.clear();
+					moveQueue.add(rootNode.findBestChild(role));
 				}
 				MCTSNode selection = rootNode.select();
 				Map<Role, Double> rewards = selection.simulate();
@@ -91,7 +93,9 @@ public class MCTSSimulator extends Thread {
 	 * - Only called a single time per play
 	 */
 	public void setStateAndTimeout(MachineState state, long timeout) {
+		stateQueue.clear();
 		stateQueue.add(state);
+		timeoutQueue.clear();
 		timeoutQueue.add(timeout);
 	}
 
@@ -108,6 +112,16 @@ public class MCTSSimulator extends Thread {
 		Move bestMove = null;
 		try {
 			bestMove = moveQueue.take();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		return bestMove;
+	}
+
+	public Move getBestMove(long timeout) {
+		Move bestMove = null;
+		try {
+			bestMove = moveQueue.poll(timeout, TimeUnit.MILLISECONDS);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}

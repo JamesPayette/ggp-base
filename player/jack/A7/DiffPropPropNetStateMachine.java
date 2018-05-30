@@ -3,8 +3,10 @@ package jack.A7;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 
 import org.ggp.base.util.gdl.grammar.Gdl;
@@ -24,7 +26,7 @@ import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 import org.ggp.base.util.statemachine.implementation.prover.query.ProverQueryBuilder;
 
-public class PropNetStateMachine extends StateMachine {
+public class DiffPropPropNetStateMachine extends StateMachine {
 	/** The underlying proposition network */
 	private PropNet propNet;
 	/** The topological ordering of the propositions */
@@ -41,8 +43,8 @@ public class PropNetStateMachine extends StateMachine {
 	public synchronized void initialize(List<Gdl> description) {
 		try {
 			propNet = OptimizingPropNetFactory.create(description);
-			roles = propNet.getRoles();
 			ordering = getOrdering();
+			roles = propNet.getRoles();
 		} catch (InterruptedException e) {
 			throw new RuntimeException(e);
 		}
@@ -54,9 +56,10 @@ public class PropNetStateMachine extends StateMachine {
 	 */
 	@Override
 	public synchronized boolean isTerminal(MachineState state) {
-		resetMachine();
-		markBases(state);
-		markPropNet();
+		Queue<Component> toMark = new LinkedList<Component>();
+		clearActions(toMark);
+		markBases(state, toMark);
+		propagate(toMark);
 		return propNet.getTerminalProposition().getValue();
 	}
 
@@ -68,9 +71,10 @@ public class PropNetStateMachine extends StateMachine {
 	 */
 	@Override
 	public synchronized int getGoal(MachineState state, Role role) throws GoalDefinitionException {
-		resetMachine();
-		markBases(state);
-		markPropNet();
+		Queue<Component> toMark = new LinkedList<Component>();
+		clearActions(toMark);
+		markBases(state, toMark);
+		propagate(toMark);
 		Set<Proposition> gps = propNet.getGoalPropositions().get(role);
 		Proposition goal = null;
 		for (Proposition gp : gps) {
@@ -90,10 +94,14 @@ public class PropNetStateMachine extends StateMachine {
 	 */
 	@Override
 	public synchronized MachineState getInitialState() {
-		resetMachine();
-		propNet.getInitProposition().setValue(true);
-		markPropNet();
-		MachineState nextState = getStateFromBase();
+		Queue<Component> toMark = new LinkedList<Component>();
+		resetMachine(toMark);
+		markInitProp(true, toMark);
+		propagate(toMark);
+		toMark = new LinkedList<Component>();
+		MachineState nextState = getStateFromBase(toMark);
+		markInitProp(false, toMark);
+		propagate(toMark);
 		return nextState;
 	}
 
@@ -118,9 +126,10 @@ public class PropNetStateMachine extends StateMachine {
 	 */
 	@Override
 	public synchronized List<Move> getLegalMoves(MachineState state, Role role) throws MoveDefinitionException {
-		resetMachine();
-		markBases(state);
-		markPropNet();
+		Queue<Component> toMark = new LinkedList<Component>();
+		clearActions(toMark);
+		markBases(state, toMark);
+		propagate(toMark);
 		List<Move> legals = new ArrayList<Move>();
 		Set<Proposition> legalProps = propNet.getLegalPropositions().get(role);
 		for (Proposition lp : legalProps) {
@@ -139,11 +148,13 @@ public class PropNetStateMachine extends StateMachine {
 	 */
 	@Override
 	public synchronized MachineState getNextState(MachineState state, List<Move> moves) throws TransitionDefinitionException {
-		resetMachine();
-		markActions(moves);
-		markBases(state);
-		markPropNet();
-		MachineState next = getStateFromBase();
+		Queue<Component> toMark = new LinkedList<Component>();
+		markActions(moves, toMark);
+		markBases(state, toMark);
+		propagate(toMark);
+		toMark = new LinkedList<Component>();
+		MachineState next = getStateFromBase(toMark);
+		propagate(toMark);
 		if (next == null) throw new TransitionDefinitionException(state, moves);
 		return next;
 	}
@@ -155,6 +166,74 @@ public class PropNetStateMachine extends StateMachine {
 
 	/* Helper methods */
 
+	private MachineState getStateFromBase(Queue<Component> toMark) {
+		Collection<Proposition> bases = new HashSet<Proposition>();
+		for(Proposition p : propNet.getBasePropositions().values()) {
+			boolean newValue = p.getSingleInput().getValue();
+			boolean oldValue = p.getValue();
+			bases.add(p);
+			if(oldValue != newValue) {
+				p.setValue(newValue);
+				addComponentsToQueue(p, toMark);
+			}
+		}
+		return new PropNetMachineState(bases);
+	}
+
+	private void markBases(MachineState state, Queue<Component> toMark) {
+		PropNetMachineState pState = (PropNetMachineState) state;
+		for (Proposition p : propNet.getBasePropositions().values()) {
+			boolean newValue = pState.get(p);
+			boolean oldValue = p.getValue();
+			if(oldValue != newValue) {
+				p.setValue(newValue);
+				addComponentsToQueue(p, toMark);
+			}
+		}
+	}
+
+	private void resetMachine(Queue<Component> toMark) {
+		for(Proposition p : propNet.getPropositions()) {
+			boolean newValue = false;
+			boolean oldValue = p.getValue();
+			if(oldValue != newValue) {
+				p.setValue(newValue);
+				addComponentsToQueue(p, toMark);
+			}
+		}
+	}
+
+	private void markActions(List<Move> moves, Queue<Component> toMark) {
+		Set<Proposition> inputs = getInputPropositions(moves);
+		for (Proposition p : propNet.getInputPropositions().values()) {
+			boolean newValue = inputs.contains(p);
+			boolean oldValue = p.getValue();
+			if(oldValue != newValue) {
+				p.setValue(newValue);
+				addComponentsToQueue(p, toMark);
+			}
+		}
+	}
+
+	private void clearActions(Queue<Component> toMark) {
+		for (Proposition p : propNet.getInputPropositions().values()) {
+			boolean newValue = false;
+			boolean oldValue = p.getValue();
+			if(oldValue != newValue) {
+				p.setValue(newValue);
+				addComponentsToQueue(p, toMark);
+			}
+		}
+	}
+
+	private void markInitProp(boolean newValue, Queue<Component> toMark) {
+		boolean oldValue = propNet.getInitProposition().getValue();
+		if (newValue != oldValue) {
+			propNet.getInitProposition().setValue(newValue);
+			addComponentsToQueue(propNet.getInitProposition(), toMark);
+		}
+	}
+
 	private List<Proposition> getOrdering() {
 		List<Proposition> order = new TopologicalSorter(propNet).sort();
 		return order;
@@ -164,41 +243,6 @@ public class PropNetStateMachine extends StateMachine {
 		GdlRelation relation = (GdlRelation) goalProposition.getName();
 		GdlConstant constant = (GdlConstant) relation.get(1);
 		return Integer.parseInt(constant.toString());
-	}
-
-	private MachineState getStateFromBase() {
-		Collection<Proposition> bases = new HashSet<Proposition>();
-		for(Proposition p : propNet.getBasePropositions().values()) {
-			p.setValue(p.getSingleInput().getValue());
-			bases.add(p);
-		}
-		return new PropNetMachineState(bases);
-	}
-
-	private void markBases(MachineState state) {
-		PropNetMachineState pState = (PropNetMachineState) state;
-		for (Proposition p : propNet.getBasePropositions().values()) {
-			p.setValue(pState.get(p));
-		}
-	}
-
-	private void resetMachine() {
-		for(Proposition p : propNet.getPropositions()) {
-			p.setValue(false);
-		}
-	}
-
-	private void markActions(List<Move> moves) {
-		Set<Proposition> inputs = getInputPropositions(moves);
-		for (Proposition p : propNet.getInputPropositions().values()) {
-			p.setValue(inputs.contains(p));
-		}
-	}
-
-	private void markPropNet() {
-		for(Proposition p : ordering) {
-			p.setValue(p.getSingleInput().getValue());
-		}
 	}
 
 	private Set<Proposition> getInputPropositions(List<Move> moves) {
@@ -213,35 +257,31 @@ public class PropNetStateMachine extends StateMachine {
 		return inputProps;
 	}
 
-	//******************FACTORING************************************//
-	public void factor() {
-		List<Set<Component>> factors = findIndependentFactors();
-	}
-
-	private List<Set<Component>> findIndependentFactors() {
-		List<Set<Component>> factors = new ArrayList<Set<Component>>();
-		Set<Component> seen = new HashSet<Component>();
-		for(Component c : propNet.getComponents()) {
-			if (seen.contains(c)) continue;
-			else {
-				Set<Component> cc = new HashSet<Component>();
-				addToFactor(c, cc, seen);
-				factors.add(cc);
-			}
-		}
-		return factors;
-	}
-
-	private void addToFactor(Component c, Set<Component> cc, Set<Component> seen) {
-		if (seen.contains(c)) return;
-		cc.add(c);
-		seen.add(c);
-		for(Component cPrime : c.getInputs()) {
-			addToFactor(cPrime, cc, seen);
-		}
+	private void addComponentsToQueue(Component c, Queue<Component> toMark) {
 		for(Component cPrime : c.getOutputs()) {
-			addToFactor(cPrime, cc, seen);
+			toMark.add(cPrime);
 		}
+	}
+
+	// TODO: Somehow enforce the topological ordering.
+	// We need to say: Whenever we get to a node, if there's a node in the ordering
+	// in front of it in the queue, the move it to the back of the queue.
+	// Any naive approach to this is going to be super slow though...
+	private void propagate(Queue<Component> toMark) {
+		if (toMark.isEmpty()) return;
+		Component c = toMark.remove();
+		if (c instanceof Proposition) {
+			Proposition p = (Proposition) c;
+			boolean newValue = p.getSingleInput().getValue();
+			boolean oldValue = p.getValue();
+			if(newValue != oldValue) {
+				p.setValue(newValue);
+				addComponentsToQueue(p, toMark);
+			}
+		} else {
+			addComponentsToQueue(c, toMark);
+		}
+		propagate(toMark);
 	}
 
 }
