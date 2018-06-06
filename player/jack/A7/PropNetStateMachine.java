@@ -2,6 +2,7 @@ package jack.A7;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -14,6 +15,8 @@ import org.ggp.base.util.gdl.grammar.GdlRelation;
 import org.ggp.base.util.gdl.grammar.GdlSentence;
 import org.ggp.base.util.propnet.architecture.Component;
 import org.ggp.base.util.propnet.architecture.PropNet;
+import org.ggp.base.util.propnet.architecture.components.Constant;
+import org.ggp.base.util.propnet.architecture.components.Or;
 import org.ggp.base.util.propnet.architecture.components.Proposition;
 import org.ggp.base.util.propnet.factory.OptimizingPropNetFactory;
 import org.ggp.base.util.statemachine.MachineState;
@@ -42,6 +45,9 @@ public class PropNetStateMachine extends StateMachine {
 	public synchronized void initialize(List<Gdl> description) {
 		try {
 			propNet = OptimizingPropNetFactory.create(description);
+			if (roles.size() == 1) {
+				singleFactor();
+			}
 			roles = propNet.getRoles();
 			ordering = getOrdering();
 		} catch (InterruptedException e) {
@@ -240,6 +246,181 @@ public class PropNetStateMachine extends StateMachine {
 			inputProps.add(inputProp);
 		}
 		return inputProps;
+	}
+
+	// Factors the PropNet when termination and goals depend on only a single factor.
+	// Performs backprop from terminal and goal states to identify dependencies, then trims
+	// all other propositions / actions.
+	private void singleFactor() {
+		System.out.println("Single factoring propnet with " + propNet.getComponents().size() + " components.");
+		propNet.renderToFile("prefactor.dot");
+		// Get dependencies of terminal and goal states.
+		Collection<Component> dependencies = new HashSet<Component>();
+		Proposition termination = propNet.getTerminalProposition();
+		dependencySearch(termination, dependencies);
+		for (Set<Proposition> roleGoalProps : propNet.getGoalPropositions().values()) {
+			for (Proposition goalProp : roleGoalProps) {
+				dependencySearch(goalProp, dependencies);
+			}
+		}
+
+		// We now know what actions are actually relevant to gameplay. Add in dependencies for
+		// determination of legality of actions.
+		for (Proposition ip : propNet.getInputPropositions().values()) {
+			if (dependencies.contains(ip)) {
+				dependencySearch(propNet.getLegalInputMap().get(ip), dependencies);
+			}
+		}
+
+		// Remove all other components from the propnet.
+		int counter = 0;
+		List<Component> components = new ArrayList<Component>(propNet.getComponents());
+		for (Component component : components) {
+			if (!dependencies.contains(component) && !(component instanceof Constant) && component != propNet.getInitProposition()) {
+				counter++;
+				propNet.removeComponent(component);
+			}
+		}
+		System.out.println("Single factoring complete. Removed " + counter + " components.");
+		propNet.renderToFile("postfactor.dot");
+	}
+
+	// Backpropagation through inputs to search for dependencies of the given component.
+	// Ignores the init proposition and constants.
+	private void dependencySearch(Component component, Collection<Component> dependencies) {
+		if (dependencies.contains(component)) return;
+		if (component instanceof Constant) return;
+		if (component == propNet.getInitProposition()) return;
+		dependencies.add(component);
+
+		for (Component dependency : component.getInputs()) {
+			dependencySearch(dependency, dependencies);
+		}
+	}
+
+	private void disjunctionFactor() {
+		System.out.println("Disjunction factoring propnet.");
+		propNet.renderToFile("predisjunction.dot");
+
+		// From the termination node, apply a partition to each disjunctive input.
+		Component termination = propNet.getTerminalProposition();
+		List<Collection<Component>> partitions = new ArrayList<Collection<Component>>();
+		Collection<Component> terminationDisjunction = disjunctionSplit(termination.getSingleInput());
+		for (Component headComponent : terminationDisjunction) {
+			Collection<Component> partition = new HashSet<Component>();
+			dependencySearch(headComponent, partition);
+
+			// We now know what actions are actually relevant to gameplay. Add in dependencies for
+			// determination of legality of actions.
+			for (Proposition ip : propNet.getInputPropositions().values()) {
+				if (partition.contains(ip)) {
+					dependencySearch(propNet.getLegalInputMap().get(ip), partition);
+				}
+			}
+
+			partitions.add(partition);
+		}
+		System.out.println("Termination node disjuncts into " + terminationDisjunction.size() + " before merging.");
+
+		// From the highest goal value proposition, apply a partition to each disjunctive input.
+		Component goalProposition = null;
+		int topGoalValue = 0;
+		Role role = roles.get(0);
+		for (Proposition goalProp : propNet.getGoalPropositions().get(role)) {
+			int goalValue = getGoalValue(goalProp);
+			if (goalValue > topGoalValue) {
+				topGoalValue = goalValue;
+				goalProposition = goalProp;
+			}
+		}
+
+		Collection<Component> goalDisjunction = disjunctionSplit(goalProposition.getSingleInput());
+		System.out.println("Goal node disjuncts into " + goalDisjunction.size() + " before merging.");
+		for (Component headComponent : goalDisjunction) {
+			Collection<Component> partition = new HashSet<Component>();
+			dependencySearch(headComponent, partition);
+
+			// We now know what actions are actually relevant to gameplay. Add in dependencies for
+			// determination of legality of actions.
+			for (Proposition ip : propNet.getInputPropositions().values()) {
+				if (partition.contains(ip)) {
+					dependencySearch(propNet.getLegalInputMap().get(ip), partition);
+				}
+			}
+
+			partitions.add(partition);
+		}
+
+		// Given the partitions, merge any partitions which may overlap.
+		boolean done = false;
+		while (!done) {
+			done = !(merge(partitions));
+		}
+
+		System.out.println("Partitioned game into " + partitions.size() + " partitions.");
+
+		// Pick one of the partitions which actually has legal actions associated with it.
+		Collection<Component> chosenPartition = null;
+		for (Collection<Component> partition : partitions) {
+			for (Proposition inputProp : propNet.getInputPropositions().values()) {
+				if (partition.contains(inputProp)) {
+					chosenPartition = partition;
+					break;
+				}
+			}
+			if (chosenPartition != null) break;
+		}
+
+		// Prune the legal propositions for actions not related to the chosen proposition.
+		for (Proposition inputProp : propNet.getInputPropositions().values()) {
+			if (!chosenPartition.contains(inputProp)) {
+				Proposition legalProp = propNet.getLegalInputMap().get(inputProp);
+				legalProp.removeAllInputs();
+				legalProp.addInput(new Constant(false));
+			}
+		}
+
+//		// Add back in the terminal and goal nodes, then prune the propnet.
+//		chosenPartition.add(goalProposition);
+//		chosenPartition.add(goalProposition.getSingleInput());
+//		chosenPartition.add(termination);
+//		chosenPartition.add(termination.getSingleInput());
+//		int counter = 0;
+//		List<Component> components = new ArrayList<Component>(propNet.getComponents());
+//		for (Component component : components) {
+//			if (!chosenPartition.contains(component) && !(component instanceof Constant) && component != propNet.getInitProposition()) {
+//				counter++;
+//				propNet.removeComponent(component);
+//			}
+//		}
+//		propNet.renderToFile("postdisjunction.dot");
+	}
+
+	//
+	private boolean merge(List<Collection<Component>> partitions) {
+		for (int i = 0; i < partitions.size() - 1; i++) {
+			for (int j = i + 1; j < partitions.size(); j++) {
+				if (!Collections.disjoint(partitions.get(i), partitions.get(j))) {
+					partitions.get(i).addAll(partitions.get(j));
+					partitions.remove(j);
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	private Collection<Component> disjunctionSplit(Component component) {
+		Collection<Component> disjunctionSet = new HashSet<Component>();
+		if (!(component instanceof Or)) {
+			disjunctionSet.add(component);
+			return disjunctionSet;
+		}
+
+		for(Component input : component.getInputs()) {
+			disjunctionSet.addAll(disjunctionSplit(input));
+		}
+		return disjunctionSet;
 	}
 
 	//******************FACTORING************************************//

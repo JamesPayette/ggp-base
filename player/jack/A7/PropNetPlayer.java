@@ -1,5 +1,8 @@
 package jack.A7;
 
+import jack.A4.MCTSNode;
+import jack.A4.MCTSSimulator;
+
 import org.ggp.base.apps.player.Player;
 import org.ggp.base.util.statemachine.MachineState;
 import org.ggp.base.util.statemachine.Move;
@@ -10,8 +13,6 @@ import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 
 import base.GGPlayer;
-import jack.A4.MCTSNode;
-import jack.A4.MCTSSimulator;
 
 /*
  * This experimental player uses both a Monte Carlo Simulator and an Alpha Beta searcher.
@@ -83,14 +84,14 @@ public class PropNetPlayer extends GGPlayer {
 		StateMachine machine = getStateMachine();
 		MachineState state = getCurrentState();
 		Role role = getRole();
-//		simulator.setStateAndTimeout(state, timeout - PADDING);
-//		Move bestMove = simulator.getBestMove(timeout - System.currentTimeMillis() - SHORT_PADDING);
-//		if (bestMove != null) {
-//			System.out.println("Using MCTS");
-//		} else {
-//			System.out.println("Using Random Move");
-		Move bestMove = machine.findLegalx(role, state);
-//		}
+		simulator.setStateAndTimeout(state, timeout - PADDING);
+		Move bestMove = simulator.getBestMove(timeout - System.currentTimeMillis() - SHORT_PADDING);
+		if (bestMove != null) {
+			System.out.println("Using MCTS");
+		} else {
+			System.out.println("Using Random Move");
+			bestMove = machine.findLegalx(role, state);
+		}
 		System.out.println("Move is: " + bestMove + "\n");
 		return bestMove;
 	}
