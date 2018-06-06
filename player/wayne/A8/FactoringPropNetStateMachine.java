@@ -49,8 +49,10 @@ public class FactoringPropNetStateMachine extends StateMachine {
 		try {
 			propNet = OptimizingPropNetFactory.create(description);
 			roles = propNet.getRoles();
-			singleFactor();
-			disjunctionFactor();
+			if (roles.size() == 1) {
+				singleFactor();
+				disjunctionFactor();
+			}
 			ordering = getOrdering();
 		} catch (InterruptedException e) {
 			throw new RuntimeException(e);
