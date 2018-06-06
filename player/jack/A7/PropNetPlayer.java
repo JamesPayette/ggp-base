@@ -1,8 +1,5 @@
 package jack.A7;
 
-import jack.A4.MCTSNode;
-import jack.A4.MCTSSimulator;
-
 import org.ggp.base.apps.player.Player;
 import org.ggp.base.util.statemachine.MachineState;
 import org.ggp.base.util.statemachine.Move;
@@ -13,6 +10,8 @@ import org.ggp.base.util.statemachine.exceptions.MoveDefinitionException;
 import org.ggp.base.util.statemachine.exceptions.TransitionDefinitionException;
 
 import base.GGPlayer;
+import jack.A4.MCTSNode;
+import jack.A4.MCTSSimulator;
 
 /*
  * This experimental player uses both a Monte Carlo Simulator and an Alpha Beta searcher.
@@ -29,7 +28,7 @@ public class PropNetPlayer extends GGPlayer {
 
 	// We give 5 seconds of padding just to be safe
 	private static final long PADDING = 3000;
-	private static final long SHORT_PADDING = 1000;
+	private static final long SHORT_PADDING = 1500;
 	// We use the same simulator throughout, just updating the root node when necessary.
 	private MCTSSimulator simulator;
 
@@ -51,6 +50,7 @@ public class PropNetPlayer extends GGPlayer {
 		simulator = new MCTSSimulator(machine, state, role);
 		simulator.start();
 		long sleepTime = timeout - System.currentTimeMillis() - PADDING;
+		if (sleepTime <= 0) return;
 		try { Thread.sleep(sleepTime); } catch (InterruptedException e) { }
 	}
 

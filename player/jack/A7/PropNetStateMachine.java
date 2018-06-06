@@ -45,10 +45,10 @@ public class PropNetStateMachine extends StateMachine {
 	public synchronized void initialize(List<Gdl> description) {
 		try {
 			propNet = OptimizingPropNetFactory.create(description);
+			roles = propNet.getRoles();
 			if (roles.size() == 1) {
 				singleFactor();
 			}
-			roles = propNet.getRoles();
 			ordering = getOrdering();
 		} catch (InterruptedException e) {
 			throw new RuntimeException(e);

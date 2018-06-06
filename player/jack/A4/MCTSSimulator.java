@@ -110,6 +110,7 @@ public class MCTSSimulator extends Thread {
 	 */
 	public Move getBestMove() {
 		Move bestMove = null;
+		moveQueue.clear();
 		try {
 			bestMove = moveQueue.take();
 		} catch (InterruptedException e) {
@@ -120,6 +121,7 @@ public class MCTSSimulator extends Thread {
 
 	public Move getBestMove(long timeout) {
 		Move bestMove = null;
+		moveQueue.clear();
 		try {
 			bestMove = moveQueue.poll(timeout, TimeUnit.MILLISECONDS);
 		} catch (InterruptedException e) {
